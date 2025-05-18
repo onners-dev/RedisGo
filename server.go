@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -54,6 +55,46 @@ func (s *Server) handleConnection(conn net.Conn) {
 				fmt.Fprintf(conn, "$-1\r\n")
 			} else {
 				fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(val), val)
+			}
+		case "DEL":
+			if len(parts) < 2 {
+				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'DEL'\r\n")
+				continue
+			}
+			count := 0
+			for _, key := range parts[1:] {
+				if s.store.Del(key) {
+					count++
+				}
+			}
+			fmt.Fprintf(conn, ":%d\r\n", count)
+		case "EXPIRE":
+			if len(parts) != 3 {
+				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'EXPIRE'\r\n")
+				continue
+			}
+			key := parts[1]
+			secs, err := strconv.Atoi(parts[2])
+			if err != nil || secs < 0 {
+				fmt.Fprintf(conn, "-ERR invalid expire time\r\n")
+				continue
+			}
+			if s.store.Expire(key, secs) {
+				fmt.Fprintf(conn, ":1\r\n")
+			} else {
+				fmt.Fprintf(conn, ":0\r\n")
+			}
+		case "KEYS":
+			keys := s.store.Keys()
+			fmt.Fprintf(conn, "*%d\r\n", len(keys))
+			for _, key := range keys {
+				fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(key), key)
+			}
+		case "DUMPALL":
+			all := s.store.DumpAll()
+			fmt.Fprintf(conn, "*%d\r\n", len(all))
+			for k, v := range all {
+				fmt.Fprintf(conn, "$%d\r\n%s\r\n$%d\r\n%s\r\n", len(k), k, len(v), v)
 			}
 		default:
 			fmt.Fprintf(conn, "-ERR unknown command '%s'\r\n", parts[0])

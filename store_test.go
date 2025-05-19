@@ -103,3 +103,24 @@ func TestTTL(t *testing.T) {
 		t.Fatalf("expected -2 for expired key, got %d", ttl)
 	}
 }
+
+func TestIncrDecr(t *testing.T) {
+	store := NewStore()
+	n, err := store.Incr("foo")
+	if err != nil || n != 1 {
+		t.Fatalf("INCR on new key should return 1, got %d, err=%v", n, err)
+	}
+	n, err = store.Incr("foo")
+	if err != nil || n != 2 {
+		t.Fatalf("INCR again should return 2, got %d, err=%v", n, err)
+	}
+	n, err = store.Decr("foo")
+	if err != nil || n != 1 {
+		t.Fatalf("DECR should return 1, got %d, err=%v", n, err)
+	}
+	store.Set("bar", "notanint")
+	_, err = store.Incr("bar")
+	if err == nil {
+		t.Fatal("INCR should error on non-integer value")
+	}
+}

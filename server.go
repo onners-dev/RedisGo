@@ -104,6 +104,31 @@ func (s *Server) handleConnection(conn net.Conn) {
 			key := parts[1]
 			ttl := s.store.TTL(key)
 			fmt.Fprintf(conn, ":%d\r\n", ttl)
+		case "INCR":
+			if len(parts) != 2 {
+				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'INCR'\r\n")
+				continue
+			}
+			key := parts[1]
+			val, err := s.store.Incr(key)
+			if err != nil {
+				fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
+			} else {
+				fmt.Fprintf(conn, ":%d\r\n", val)
+			}
+		case "DECR":
+			if len(parts) != 2 {
+				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'DECR'\r\n")
+				continue
+			} else {
+				key := parts[1]
+				val, err := s.store.Decr(key)
+				if err != nil {
+					fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
+				} else {
+					fmt.Fprintf(conn, ":%d\r\n", val)
+				}
+			}
 		default:
 			fmt.Fprintf(conn, "-ERR unknown command '%s'\r\n", parts[0])
 		}

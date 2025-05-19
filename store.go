@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -127,4 +129,46 @@ func (s *Store) TTL(key string) int {
 		return -2
 	}
 	return ttl
+}
+
+// Incr increments a key's integer value by 1, setting it to 0 if it doesn't exist.
+func (s *Store) Incr(key string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	val, ok := s.data[key]
+	var n int
+	var err error
+	if ok {
+		n, err = strconv.Atoi(val)
+		if err != nil {
+			return 0, errors.New("value is not an integer")
+		}
+	} else {
+		n = 0
+	}
+	n++
+	s.data[key] = strconv.Itoa(n)
+	delete(s.expires, key)
+	return n, nil
+}
+
+// Decr decrements a key's integer value by 1, setting it to 0 if it doesn't exist.
+func (s *Store) Decr(key string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	val, ok := s.data[key]
+	var n int
+	var err error
+	if ok {
+		n, err = strconv.Atoi(val)
+		if err != nil {
+			return 0, errors.New("value is not an integer")
+		}
+	} else {
+		n = 0
+	}
+	n--
+	s.data[key] = strconv.Itoa(n)
+	delete(s.expires, key)
+	return n, nil
 }

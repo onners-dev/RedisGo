@@ -84,3 +84,22 @@ func TestExpireDoesNotAffectOtherKeys(t *testing.T) {
 		t.Fatal("expected baz to still exist")
 	}
 }
+func TestTTL(t *testing.T) {
+	store := NewStore()
+	if ttl := store.TTL("foo"); ttl != -2 {
+		t.Fatalf("expected -2 for non-existent key, got %d", ttl)
+	}
+	store.Set("foo", "bar")
+	if ttl := store.TTL("foo"); ttl != -1 {
+		t.Fatalf("expected -1 for no-expiry key, got %d", ttl)
+	}
+	store.Expire("foo", 1)
+	ttl := store.TTL("foo")
+	if ttl <= 0 {
+		t.Fatalf("expected >0 for key with expiry, got %d", ttl)
+	}
+	time.Sleep(2 * time.Second)
+	if ttl := store.TTL("foo"); ttl != -2 {
+		t.Fatalf("expected -2 for expired key, got %d", ttl)
+	}
+}

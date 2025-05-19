@@ -96,6 +96,14 @@ func (s *Server) handleConnection(conn net.Conn) {
 			for k, v := range all {
 				fmt.Fprintf(conn, "$%d\r\n%s\r\n$%d\r\n%s\r\n", len(k), k, len(v), v)
 			}
+		case "TTL":
+			if len(parts) != 2 {
+				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'TTL'\r\n")
+				continue
+			}
+			key := parts[1]
+			ttl := s.store.TTL(key)
+			fmt.Fprintf(conn, ":%d\r\n", ttl)
 		default:
 			fmt.Fprintf(conn, "-ERR unknown command '%s'\r\n", parts[0])
 		}

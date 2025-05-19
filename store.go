@@ -107,3 +107,24 @@ func (s *Store) DumpAll() map[string]string {
 	}
 	return all
 }
+
+// TTL returns the remaining time to live of a key in seconds. OR:
+// -2 means that the key does not exist.
+// -1 means that the key exists but has no expiry set.
+func (s *Store) TTL(key string) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	_, exists := s.data[key]
+	if !exists {
+		return -2
+	}
+	exp, hasExp := s.expires[key]
+	if !hasExp {
+		return -1
+	}
+	ttl := int(time.Until(exp).Seconds())
+	if ttl < 0 {
+		return -2
+	}
+	return ttl
+}

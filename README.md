@@ -79,15 +79,15 @@ $1
 0
 
 ### Coming Soon/To-Do
-[ ] MSET/MGET — set/get multiple keys at once
-[ ] Persistence:
-[ ] Append-Only File (AOF) logging
-[ ] Snapshotting (RDB-like periodic dump)
-[ ] Data Structures:
-[ ] Lists (LPUSH, RPOP, etc.)
-[ ] Sets (SADD, SREM, SMEMBERS, etc.)
-[ ] Hashes (HSET, HGET, etc.)
-[ ] [Bonus] Sorted Sets (ZADD, ZRANGE)
+-  MSET/MGET — set/get multiple keys at once
+- Persistence:
+-  Append-Only File (AOF) logging
+- Snapshotting (RDB-like periodic dump)
+- Data Structures:
+- Lists (LPUSH, RPOP, etc.)
+- Sets (SADD, SREM, SMEMBERS, etc.)
+- Hashes (HSET, HGET, etc.)
+- Sorted Sets (ZADD, ZRANGE)
 
 ### Running Tests
 ```sh

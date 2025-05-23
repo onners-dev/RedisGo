@@ -124,3 +124,19 @@ func TestIncrDecr(t *testing.T) {
 		t.Fatal("INCR should error on non-integer value")
 	}
 }
+
+func TestMSetMGet(t *testing.T) {
+	store := NewStore()
+	err := store.MSet("a", "1", "b", "2", "c", "3")
+	if err != nil {
+		t.Fatal("unexpected error from MSet:", err)
+	}
+	vals := store.MGet("a", "c", "d")
+	if vals[0] != "1" || vals[1] != "3" || vals[2] != "" {
+		t.Fatalf("expected [1 3 ], got %#v", vals)
+	}
+	err = store.MSet("onlykey")
+	if err == nil {
+		t.Fatal("expected error on odd number of MSet args")
+	}
+}

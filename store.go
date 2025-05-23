@@ -172,3 +172,38 @@ func (s *Store) Decr(key string) (int, error) {
 	delete(s.expires, key)
 	return n, nil
 }
+
+// MSet sets multiple key-value pairs. Expects even number of args: key1, val1, key2, etc
+func (s *Store) MSet(keysValues ...string) error {
+	if len(keysValues)%2 != 0 {
+		return errors.New("MSET requires an even number of arguments")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := 0; i < len(keysValues); i += 2 {
+		s.data[keysValues[i]] = keysValues[i+1]
+		delete(s.expires, keysValues[i]) // Clear expiry on update
+	}
+	return nil
+}
+
+// MGet returns values for the given keys in order. Missing keys return "".
+func (s *Store) MGet(keys ...string) []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	values := make([]string, len(keys))
+	now := time.Now()
+	for i, key := range keys {
+		if exp, ok := s.expires[key]; ok && now.After(exp) {
+			values[i] = ""
+			continue
+		}
+		val, ok := s.data[key]
+		if ok {
+			values[i] = val
+		} else {
+			values[i] = ""
+		}
+	}
+	return values
+}

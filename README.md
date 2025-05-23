@@ -79,7 +79,6 @@ $1
 0
 
 ### Coming Soon/To-Do
--  MSET/MGET — set/get multiple keys at once
 - Persistence:
 -  Append-Only File (AOF) logging
 - Snapshotting (RDB-like periodic dump)

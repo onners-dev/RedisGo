@@ -129,6 +129,31 @@ func (s *Server) handleConnection(conn net.Conn) {
 					fmt.Fprintf(conn, ":%d\r\n", val)
 				}
 			}
+		case "MSET":
+			if len(parts) < 3 || len(parts[1:])%2 != 0 {
+				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'MSET'\r\n")
+				continue
+			}
+			err := s.store.MSet(parts[1:]...)
+			if err != nil {
+				fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
+			} else {
+				fmt.Fprintf(conn, "+OK\r\n")
+			}
+		case "MGET":
+			if len(parts) < 2 {
+				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'MGET'\r\n")
+				continue
+			}
+			values := s.store.MGet(parts[1:]...)
+			fmt.Fprintf(conn, "*%d\r\n", len(values))
+			for _, v := range values {
+				if v == "" {
+					fmt.Fprintf(conn, "$-1\r\n")
+				} else {
+					fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(v), v)
+				}
+			}
 		default:
 			fmt.Fprintf(conn, "-ERR unknown command '%s'\r\n", parts[0])
 		}

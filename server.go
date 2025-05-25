@@ -154,6 +154,38 @@ func (s *Server) handleConnection(conn net.Conn) {
 					fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(v), v)
 				}
 			}
+		case "LPUSH":
+			if len(parts) < 3 {
+				fmt.Fprintf(conn, "-ERR usage: LPUSH key value [value ...]\r\n")
+				continue
+			}
+			key := parts[1]
+			values := parts[2:]
+			n := s.store.LPush(key, values...)
+			fmt.Fprintf(conn, ":%d\r\n", n)
+		
+		case "RPOP":
+			if len(parts) != 2 {
+				fmt.Fprintf(conn, "-ERR usage: RPOP key\r\n")
+				continue
+			}
+			key := parts[1]
+			val, err := s.store.RPop(key)
+			if err != nil {
+				fmt.Fprintf(conn, "$-1\r\n")
+			} else {
+				fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(val), val)
+			}
+		
+		case "LLEN":
+			if len(parts) != 2 {
+				fmt.Fprintf(conn, "-ERR usage: LLEN key\r\n")
+				continue
+			}
+			key := parts[1]
+			n := s.store.LLen(key)
+			fmt.Fprintf(conn, ":%d\r\n", n)
+			
 		default:
 			fmt.Fprintf(conn, "-ERR unknown command '%s'\r\n", parts[0])
 		}

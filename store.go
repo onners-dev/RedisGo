@@ -9,28 +9,28 @@ import (
 
 type Store struct {
 	mu      sync.RWMutex
-	data    map[string]string
+	data    map[string]*Value
 	expires map[string]time.Time
 }
 
 func NewStore() *Store {
 	s := &Store{
-		data:    make(map[string]string),
+		data:    make(map[string]*Value),
 		expires: make(map[string]time.Time),
 	}
 	go s.expiryLoop()
 	return s
 }
 
-// Set stores a value for a given key.
+// Set stores a string value for a given key.
 func (s *Store) Set(key, value string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.data[key] = value
+	s.data[key] = &Value{Type: StringType, Str: value}
 	delete(s.expires, key) // Remove expiry if value is updated
 }
 
-// Get retrieves the value for a given key and a boolean if it exists.
+// Get retrieves the string value for a given key and a boolean if it exists.
 func (s *Store) Get(key string) (string, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -38,7 +38,10 @@ func (s *Store) Get(key string) (string, bool) {
 		return "", false
 	}
 	val, ok := s.data[key]
-	return val, ok
+	if !ok || val.Type != StringType {
+		return "", false
+	}
+	return val.Str, true
 }
 
 // Del removes a key from the store. Returns true if key was present.
@@ -95,7 +98,7 @@ func (s *Store) Keys() []string {
 	return keys
 }
 
-// DumpAll returns a map of all key-value pairs that are not expired.
+// DumpAll returns a map of all string key-value pairs that are not expired and of String type.
 func (s *Store) DumpAll() map[string]string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -105,7 +108,9 @@ func (s *Store) DumpAll() map[string]string {
 		if exp, ok := s.expires[k]; ok && now.After(exp) {
 			continue
 		}
-		all[k] = v
+		if v.Type == StringType {
+			all[k] = v.Str
+		}
 	}
 	return all
 }
@@ -139,7 +144,10 @@ func (s *Store) Incr(key string) (int, error) {
 	var n int
 	var err error
 	if ok {
-		n, err = strconv.Atoi(val)
+		if val.Type != StringType {
+			return 0, errors.New("value is not a string")
+		}
+		n, err = strconv.Atoi(val.Str)
 		if err != nil {
 			return 0, errors.New("value is not an integer")
 		}
@@ -147,7 +155,7 @@ func (s *Store) Incr(key string) (int, error) {
 		n = 0
 	}
 	n++
-	s.data[key] = strconv.Itoa(n)
+	s.data[key] = &Value{Type: StringType, Str: strconv.Itoa(n)}
 	delete(s.expires, key)
 	return n, nil
 }
@@ -160,7 +168,10 @@ func (s *Store) Decr(key string) (int, error) {
 	var n int
 	var err error
 	if ok {
-		n, err = strconv.Atoi(val)
+		if val.Type != StringType {
+			return 0, errors.New("value is not a string")
+		}
+		n, err = strconv.Atoi(val.Str)
 		if err != nil {
 			return 0, errors.New("value is not an integer")
 		}
@@ -168,7 +179,7 @@ func (s *Store) Decr(key string) (int, error) {
 		n = 0
 	}
 	n--
-	s.data[key] = strconv.Itoa(n)
+	s.data[key] = &Value{Type: StringType, Str: strconv.Itoa(n)}
 	delete(s.expires, key)
 	return n, nil
 }
@@ -181,13 +192,13 @@ func (s *Store) MSet(keysValues ...string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for i := 0; i < len(keysValues); i += 2 {
-		s.data[keysValues[i]] = keysValues[i+1]
+		s.data[keysValues[i]] = &Value{Type: StringType, Str: keysValues[i+1]}
 		delete(s.expires, keysValues[i]) // Clear expiry on update
 	}
 	return nil
 }
 
-// MGet returns values for the given keys in order. Missing keys return "".
+// MGet returns string values for the given keys in order. Missing keys return "".
 func (s *Store) MGet(keys ...string) []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -199,8 +210,8 @@ func (s *Store) MGet(keys ...string) []string {
 			continue
 		}
 		val, ok := s.data[key]
-		if ok {
-			values[i] = val
+		if ok && val.Type == StringType {
+			values[i] = val.Str
 		} else {
 			values[i] = ""
 		}

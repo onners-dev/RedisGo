@@ -140,3 +140,38 @@ func TestMSetMGet(t *testing.T) {
 		t.Fatal("expected error on odd number of MSet args")
 	}
 }
+
+func TestListOps(t *testing.T) {
+    store := NewStore()
+
+    // Test LPUSH + LLEN
+    if n := store.LPush("mylist", "a"); n != 1 {
+        t.Fatalf("expected 1, got %d", n)
+    }
+    if n := store.LPush("mylist", "b", "c"); n != 3 {
+        t.Fatalf("expected 3 after multi-LPUSH, got %d", n)
+    }
+    if l := store.LLen("mylist"); l != 3 {
+        t.Fatalf("expected 3, got %d", l)
+    }
+
+    // Test RPOP order
+    v, err := store.RPop("mylist")
+    if err != nil || v != "a" {
+        t.Fatalf("expected 'a', got '%s' (err=%v)", v, err)
+    }
+    v, err = store.RPop("mylist")
+    if err != nil || v != "b" {
+        t.Fatalf("expected 'b', got '%s' (err=%v)", v, err)
+    }
+    v, err = store.RPop("mylist")
+    if err != nil || v != "c" {
+        t.Fatalf("expected 'c', got '%s' (err=%v)", v, err)
+    }
+
+    // Empty pop
+    _, err = store.RPop("mylist")
+    if err == nil {
+        t.Fatal("expected error on empty list")
+    }
+}

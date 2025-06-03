@@ -163,7 +163,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 			values := parts[2:]
 			n := s.store.LPush(key, values...)
 			fmt.Fprintf(conn, ":%d\r\n", n)
-		
+
 		case "RPOP":
 			if len(parts) != 2 {
 				fmt.Fprintf(conn, "-ERR usage: RPOP key\r\n")
@@ -176,7 +176,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 			} else {
 				fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(val), val)
 			}
-		
+
 		case "LLEN":
 			if len(parts) != 2 {
 				fmt.Fprintf(conn, "-ERR usage: LLEN key\r\n")
@@ -185,7 +185,43 @@ func (s *Server) handleConnection(conn net.Conn) {
 			key := parts[1]
 			n := s.store.LLen(key)
 			fmt.Fprintf(conn, ":%d\r\n", n)
-			
+
+		case "SADD":
+			if len(parts) < 3 {
+				fmt.Fprintf(conn, "-ERR usage: SADD key member [member ...]\r\n")
+				continue
+			}
+			key := parts[1]
+			members := parts[2:]
+			n := s.store.SAdd(key, members...)
+			fmt.Fprintf(conn, ":%d\r\n", n)
+
+		case "SREM":
+			if len(parts) < 3 {
+				fmt.Fprintf(conn, "-ERR usage: SREM key member [member ...]\r\n")
+				continue
+			}
+			key := parts[1]
+			members := parts[2:]
+			n := s.store.SRem(key, members...)
+			fmt.Fprintf(conn, ":%d\r\n", n)
+
+		case "SMEMBERS":
+			if len(parts) != 2 {
+				fmt.Fprintf(conn, "-ERR usage: SMEMBERS key\r\n")
+				continue
+			}
+			key := parts[1]
+			members, err := s.store.SMembers(key)
+			if err != nil {
+				fmt.Fprintf(conn, "*0\r\n")
+			} else {
+				fmt.Fprintf(conn, "*%d\r\n", len(members))
+				for _, m := range members {
+					fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(m), m)
+				}
+			}
+
 		default:
 			fmt.Fprintf(conn, "-ERR unknown command '%s'\r\n", parts[0])
 		}

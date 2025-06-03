@@ -7,6 +7,21 @@ import (
 	"time"
 )
 
+type ValueType int
+
+const (
+	StringType ValueType = iota
+	ListType
+	SetType
+)
+
+type Value struct {
+	Type ValueType
+	Str  string
+	List []string
+	Set  map[string]struct{}
+}
+
 type Store struct {
 	mu      sync.RWMutex
 	data    map[string]*Value

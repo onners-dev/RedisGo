@@ -44,47 +44,32 @@ nc localhost 6379
 
 ### Commands
 
-SET foo bar
-+OK
-
-GET foo
-$3
-bar
-
-EXPIRE foo 10
-:1
-
-TTL foo
-:10
-
-INCR counter
-:1
-
-DECR counter
-:0
-
-DEL foo
-:1
-
-KEYS
-*1
-$7
-counter
-
-DUMPALL
-*1
-$7
-counter
-$1
-0
+| Command                           | Description                                   | Example usage                  | Example response             |
+|------------------------------------|-----------------------------------------------|-------------------------------|------------------------------|
+| `SET key value`                   | Set string value for a key                    | `SET foo bar`                  | `+OK`                        |
+| `GET key`                         | Get string value for a key                    | `GET foo`                      | `$3`<br>`bar`                |
+| `DEL key [key ...]`               | Delete one or more keys                       | `DEL foo`                      | `:1` (number deleted)        |
+| `EXPIRE key seconds`              | Set expiry in seconds for a key               | `EXPIRE foo 10`                | `:1` (success)               |
+| `TTL key`                         | Get time-to-live in seconds                   | `TTL foo`                      | `:9`                         |
+| `INCR key`                        | Increment integer value                       | `INCR counter`                 | `:1`                         |
+| `DECR key`                        | Decrement integer value                       | `DECR counter`                 | `:0`                         |
+| `KEYS`                            | List all non-expired keys                     | `KEYS`                         | `*1`<br>`$7`<br>`counter`    |
+| `DUMPALL`                         | Get all string keys and values                | `DUMPALL`                      | `*1 ...`                     |
+| `MSET key value [key value ...]`  | Set multiple string keys at once              | `MSET a 1 b 2`                 | `+OK`                        |
+| `MGET key [key ...]`              | Get multiple string values                    | `MGET a b missing`             | `*3 ...`                     |
+| `LPUSH key value [value ...]`     | Prepend one/more items to a list              | `LPUSH list a b c`             | `:3`                         |
+| `RPOP key`                        | Remove and return the last item from a list   | `RPOP list`                    | `$1`<br>`a`                  |
+| `LLEN key`                        | Get the number of items in a list             | `LLEN list`                    | `:2`                         |
+| `SADD key member [member ...]`    | Add one/more items to a set                   | `SADD myset x y y`             | `:2` (added, unique)         |
+| `SREM key member [member ...]`    | Remove one/more items from a set              | `SREM myset x`                 | `:1` (removed count)         |
+| `SMEMBERS key`                    | Get all members of a set                      | `SMEMBERS myset`               | `*1`<br>`$1`<br>`y`          |
+| `PING`                            | Test connection                               | `PING`                         | `PONG`                       |
 
 ### Coming Soon/To-Do
 - Persistence:
 -  Append-Only File (AOF) logging
 - Snapshotting (RDB-like periodic dump)
 - Data Structures:
-- Lists (LPUSH, RPOP, etc.)
-- Sets (SADD, SREM, SMEMBERS, etc.)
 - Hashes (HSET, HGET, etc.)
 - Sorted Sets (ZADD, ZRANGE)
 

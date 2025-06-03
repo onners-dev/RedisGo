@@ -142,36 +142,99 @@ func TestMSetMGet(t *testing.T) {
 }
 
 func TestListOps(t *testing.T) {
-    store := NewStore()
+	store := NewStore()
 
-    // Test LPUSH + LLEN
-    if n := store.LPush("mylist", "a"); n != 1 {
-        t.Fatalf("expected 1, got %d", n)
-    }
-    if n := store.LPush("mylist", "b", "c"); n != 3 {
-        t.Fatalf("expected 3 after multi-LPUSH, got %d", n)
-    }
-    if l := store.LLen("mylist"); l != 3 {
-        t.Fatalf("expected 3, got %d", l)
-    }
+	// Test LPUSH + LLEN
+	if n := store.LPush("mylist", "a"); n != 1 {
+		t.Fatalf("expected 1, got %d", n)
+	}
+	if n := store.LPush("mylist", "b", "c"); n != 3 {
+		t.Fatalf("expected 3 after multi-LPUSH, got %d", n)
+	}
+	if l := store.LLen("mylist"); l != 3 {
+		t.Fatalf("expected 3, got %d", l)
+	}
 
-    // Test RPOP order
-    v, err := store.RPop("mylist")
-    if err != nil || v != "a" {
-        t.Fatalf("expected 'a', got '%s' (err=%v)", v, err)
-    }
-    v, err = store.RPop("mylist")
-    if err != nil || v != "b" {
-        t.Fatalf("expected 'b', got '%s' (err=%v)", v, err)
-    }
-    v, err = store.RPop("mylist")
-    if err != nil || v != "c" {
-        t.Fatalf("expected 'c', got '%s' (err=%v)", v, err)
-    }
+	// Test RPOP order
+	v, err := store.RPop("mylist")
+	if err != nil || v != "a" {
+		t.Fatalf("expected 'a', got '%s' (err=%v)", v, err)
+	}
+	v, err = store.RPop("mylist")
+	if err != nil || v != "b" {
+		t.Fatalf("expected 'b', got '%s' (err=%v)", v, err)
+	}
+	v, err = store.RPop("mylist")
+	if err != nil || v != "c" {
+		t.Fatalf("expected 'c', got '%s' (err=%v)", v, err)
+	}
 
-    // Empty pop
-    _, err = store.RPop("mylist")
-    if err == nil {
-        t.Fatal("expected error on empty list")
-    }
+	// Empty pop
+	_, err = store.RPop("mylist")
+	if err == nil {
+		t.Fatal("expected error on empty list")
+	}
+}
+
+func TestSetOps(t *testing.T) {
+	store := NewStore()
+
+	// SAdd single member
+	added := store.SAdd("myset", "a")
+	if added != 1 {
+		t.Fatalf("expected 1 added, got %d", added)
+	}
+	// SAdd duplicate member does not add again
+	added = store.SAdd("myset", "a")
+	if added != 0 {
+		t.Fatalf("expected 0 added (duplicate), got %d", added)
+	}
+	// SAdd multiple members, including a duplicate
+	added = store.SAdd("myset", "b", "c", "a")
+	if added != 2 {
+		t.Fatalf("expected 2 added, got %d", added)
+	}
+
+	// SMembers should return all members (order not guaranteed)
+	members, err := store.SMembers("myset")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	want := map[string]bool{"a": true, "b": true, "c": true}
+	if len(members) != len(want) {
+		t.Fatalf("expected 3 members, got %d: %v", len(members), members)
+	}
+	for _, m := range members {
+		if !want[m] {
+			t.Errorf("unexpected member in set: %q", m)
+		}
+	}
+
+	// SRem removes members
+	removed := store.SRem("myset", "a", "d") // 'a' exists, 'd' does not
+	if removed != 1 {
+		t.Fatalf("expected 1 removed, got %d", removed)
+	}
+	members, _ = store.SMembers("myset")
+	want = map[string]bool{"b": true, "c": true}
+	if len(members) != len(want) {
+		t.Fatalf("expected 2 members after SRem, got %d: %v", len(members), members)
+	}
+
+	// SAdd on key with wrong type creates a new set
+	store.Set("notaset", "hello")
+	added = store.SAdd("notaset", "x")
+	if added != 1 {
+		t.Fatalf("expected 1 added for new set, got %d", added)
+	}
+	val, ok := store.Get("notaset")
+	if ok && val == "hello" {
+		t.Fatalf("SAdd should overwrite previous string value")
+	}
+
+	// SMembers error on non-existing set
+	_, err = store.SMembers("doesnotexist")
+	if err == nil {
+		t.Fatalf("expected error on non-existent set key")
+	}
 }

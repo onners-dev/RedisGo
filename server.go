@@ -221,6 +221,49 @@ func (s *Server) handleConnection(conn net.Conn) {
 					fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(m), m)
 				}
 			}
+		case "HSET":
+			if len(parts) != 4 {
+				fmt.Fprintf(conn, "-ERR usage: HSET key field value\r\n")
+				continue
+			}
+			key, field, value := parts[1], parts[2], parts[3]
+			n := s.store.HSet(key, field, value)
+			fmt.Fprintf(conn, ":%d\r\n", n)
+		case "HGET":
+			if len(parts) != 3 {
+				fmt.Fprintf(conn, "-ERR usage: HGET key field\r\n")
+				continue
+			}
+			key, field := parts[1], parts[2]
+			val, ok := s.store.HGet(key, field)
+			if !ok {
+				fmt.Fprintf(conn, "$-1\r\n")
+			} else {
+				fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(val), val)
+			}
+		case "HDEL":
+			if len(parts) < 3 {
+				fmt.Fprintf(conn, "-ERR usage: HDEL key field [field ...]\r\n")
+				continue
+			}
+			key := parts[1]
+			n := s.store.HDel(key, parts[2:]...)
+			fmt.Fprintf(conn, ":%d\r\n", n)
+		case "HGETALL":
+			if len(parts) != 2 {
+				fmt.Fprintf(conn, "-ERR usage: HGETALL key\r\n")
+				continue
+			}
+			key := parts[1]
+			vals, err := s.store.HGetAll(key)
+			if err != nil {
+				fmt.Fprintf(conn, "*0\r\n")
+				continue
+			}
+			fmt.Fprintf(conn, "*%d\r\n", len(vals)*2)
+			for f, v := range vals {
+				fmt.Fprintf(conn, "$%d\r\n%s\r\n$%d\r\n%s\r\n", len(f), f, len(v), v)
+			}
 
 		default:
 			fmt.Fprintf(conn, "-ERR unknown command '%s'\r\n", parts[0])

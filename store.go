@@ -13,6 +13,7 @@ const (
 	StringType ValueType = iota
 	ListType
 	SetType
+	HashType
 )
 
 type Value struct {
@@ -20,6 +21,7 @@ type Value struct {
 	Str  string
 	List []string
 	Set  map[string]struct{}
+	Hash map[string]string
 }
 
 type Store struct {

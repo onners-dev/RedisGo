@@ -238,3 +238,35 @@ func TestSetOps(t *testing.T) {
 		t.Fatalf("expected error on non-existent set key")
 	}
 }
+
+func TestHashOps(t *testing.T) {
+	store := NewStore()
+
+	// HSET new field
+	n := store.HSet("h", "foo", "bar")
+	if n != 1 {
+		t.Fatalf("expected 1 for new field, got %d", n)
+	}
+	// HSET existing field (overwrite)
+	n = store.HSet("h", "foo", "baz")
+	if n != 0 {
+		t.Fatalf("expected 0 for overwrite, got %d", n)
+	}
+	// HGET
+	v, ok := store.HGet("h", "foo")
+	if !ok || v != "baz" {
+		t.Fatalf("expected baz, got %q", v)
+	}
+	// HDEL
+	del := store.HDel("h", "foo")
+	if del != 1 {
+		t.Fatalf("expected 1 deleted, got %d", del)
+	}
+	// HGETALL
+	store.HSet("h", "a", "1")
+	store.HSet("h", "b", "2")
+	all, err := store.HGetAll("h")
+	if err != nil || all["a"] != "1" || all["b"] != "2" {
+		t.Fatalf("HGETALL failed: got %v err=%v", all, err)
+	}
+}

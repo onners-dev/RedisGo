@@ -64,13 +64,17 @@ nc localhost 6379
 | `SREM key member [member ...]`    | Remove one/more items from a set              | `SREM myset x`                 | `:1` (removed count)         |
 | `SMEMBERS key`                    | Get all members of a set                      | `SMEMBERS myset`               | `*1`<br>`$1`<br>`y`          |
 | `PING`                            | Test connection                               | `PING`                         | `PONG`                       |
+| `HSET key field value`       | Set field in hash              | `HSET h foo bar`          | `:1`      |
+| `HGET key field`             | Get field from hash            | `HGET h foo`              | `$3`<br>`bar` |
+| `HDEL key field [field ...]` | Delete field(s) in hash        | `HDEL h foo`              | `:1`      |
+| `HGETALL key`                | Get all fields/values in hash  | `HGETALL h`               | `*2 ...`  |
+
 
 ### Coming Soon/To-Do
 - Persistence:
 -  Append-Only File (AOF) logging
 - Snapshotting (RDB-like periodic dump)
 - Data Structures:
-- Hashes (HSET, HGET, etc.)
 - Sorted Sets (ZADD, ZRANGE)
 
 ### Running Tests

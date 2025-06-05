@@ -265,6 +265,51 @@ func (s *Server) handleConnection(conn net.Conn) {
 				fmt.Fprintf(conn, "$%d\r\n%s\r\n$%d\r\n%s\r\n", len(f), f, len(v), v)
 			}
 
+		case "ZADD":
+			if len(parts) != 4 {
+				fmt.Fprintf(conn, "-ERR usage: ZADD key score member\r\n")
+				continue
+			}
+			key, scoreStr, member := parts[1], parts[2], parts[3]
+			score, err := strconv.ParseFloat(scoreStr, 64)
+			if err != nil {
+				fmt.Fprintf(conn, "-ERR invalid score\r\n")
+				continue
+			}
+			n := s.store.ZAdd(key, score, member)
+			fmt.Fprintf(conn, ":%d\r\n", n)
+
+		case "ZREM":
+			if len(parts) != 3 {
+				fmt.Fprintf(conn, "-ERR usage: ZREM key member\r\n")
+				continue
+			}
+			key, member := parts[1], parts[2]
+			n := s.store.ZRem(key, member)
+			fmt.Fprintf(conn, ":%d\r\n", n)
+
+		case "ZRANGE":
+			if len(parts) != 4 {
+				fmt.Fprintf(conn, "-ERR usage: ZRANGE key start stop\r\n")
+				continue
+			}
+			key, startStr, stopStr := parts[1], parts[2], parts[3]
+			start, err1 := strconv.Atoi(startStr)
+			stop, err2 := strconv.Atoi(stopStr)
+			if err1 != nil || err2 != nil {
+				fmt.Fprintf(conn, "-ERR invalid start or stop\r\n")
+				continue
+			}
+			members, err := s.store.ZRange(key, start, stop)
+			if err != nil {
+				fmt.Fprintf(conn, "*0\r\n")
+				continue
+			}
+			fmt.Fprintf(conn, "*%d\r\n", len(members))
+			for _, m := range members {
+				fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(m), m)
+			}
+
 		default:
 			fmt.Fprintf(conn, "-ERR unknown command '%s'\r\n", parts[0])
 		}

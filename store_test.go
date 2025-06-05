@@ -270,3 +270,86 @@ func TestHashOps(t *testing.T) {
 		t.Fatalf("HGETALL failed: got %v err=%v", all, err)
 	}
 }
+
+func TestZSetOps(t *testing.T) {
+	store := NewStore()
+
+	// ZAdd: Add new members
+	added := store.ZAdd("myzset", 0.5, "a")
+	if added != 1 {
+		t.Fatalf("expected 1 (new member), got %d", added)
+	}
+	added = store.ZAdd("myzset", 1.2, "b")
+	added2 := store.ZAdd("myzset", 2.1, "c")
+	if added != 1 || added2 != 1 {
+		t.Fatalf("expected 1 for new members, got %d %d", added, added2)
+	}
+
+	// ZAdd: Update existing member's score
+	added = store.ZAdd("myzset", 3.3, "a")
+	if added != 0 {
+		t.Fatalf("expected 0 (existing member updated), got %d", added)
+	}
+
+	// ZRange: All
+	members, err := store.ZRange("myzset", 0, -1)
+	if err != nil {
+		t.Fatalf("ZRange error: %v", err)
+	}
+	expected := []string{"b", "c", "a"} // b=1.2, c=2.1, a=3.3
+	for i, m := range expected {
+		if members[i] != m {
+			t.Fatalf("ZRange mismatch: expected %q at %d, got %q", m, i, members[i])
+		}
+	}
+
+	// ZRange: With negative indices
+	members, err = store.ZRange("myzset", -2, -1)
+	if err != nil {
+		t.Fatalf("ZRange error: %v", err)
+	}
+	expected = []string{"c", "a"}
+	if len(members) != len(expected) {
+		t.Fatalf("ZRange len: got %d, want %d", len(members), len(expected))
+	}
+	for i, m := range expected {
+		if members[i] != m {
+			t.Fatalf("ZRange neg mismatch: expected %q at %d, got %q", m, i, members[i])
+		}
+	}
+
+	// ZRem: Remove member
+	removed := store.ZRem("myzset", "b")
+	if removed != 1 {
+		t.Fatalf("expected 1 removed, got %d", removed)
+	}
+	members, _ = store.ZRange("myzset", 0, -1)
+	expected = []string{"c", "a"}
+	if len(members) != len(expected) {
+		t.Fatalf("after ZRem expected %d, got %d", len(expected), len(members))
+	}
+	for i, m := range expected {
+		if members[i] != m {
+			t.Fatalf("after ZRem mismatch at %d: want %q, got %q", i, m, members[i])
+		}
+	}
+
+	// ZRem: Remove non-existent
+	removed = store.ZRem("myzset", "x")
+	if removed != 0 {
+		t.Fatalf("expected 0 removed for non-existent, got %d", removed)
+	}
+
+	// ZRange: Empty/non-existent key
+	members, err = store.ZRange("nozset", 0, -1)
+	if err == nil {
+		t.Fatal("expected error for non-existent zset")
+	}
+	members, err = store.ZRange("myzset", 5, 10)
+	if err != nil {
+		t.Fatalf("unexpected error for empty result: %v", err)
+	}
+	if len(members) != 0 {
+		t.Fatalf("expected 0 members for out-of-range, got %d", len(members))
+	}
+}

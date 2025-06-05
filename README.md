@@ -74,8 +74,6 @@ nc localhost 6379
 - Persistence:
 -  Append-Only File (AOF) logging
 - Snapshotting (RDB-like periodic dump)
-- Data Structures:
-- Sorted Sets (ZADD, ZRANGE)
 
 ### Running Tests
 ```sh

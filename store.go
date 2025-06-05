@@ -14,14 +14,17 @@ const (
 	ListType
 	SetType
 	HashType
+	ZSetType
 )
 
 type Value struct {
-	Type ValueType
-	Str  string
-	List []string
-	Set  map[string]struct{}
-	Hash map[string]string
+	Type    ValueType
+	Str     string
+	List    []string
+	Set     map[string]struct{}
+	Hash    map[string]string
+	ZSet    []ZSetEntry
+	ZSetMap map[string]*ZSetEntry
 }
 
 type Store struct {

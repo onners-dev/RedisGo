@@ -72,8 +72,9 @@ nc localhost 6379
 
 ### Coming Soon/To-Do
 - Persistence:
--  Append-Only File (AOF) logging
+- Append-Only File (AOF) logging
 - Snapshotting (RDB-like periodic dump)
+- Webapp to showcase features
 
 ### Running Tests
 ```sh

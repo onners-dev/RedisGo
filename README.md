@@ -79,3 +79,18 @@ nc localhost 6379
 ```sh
 go test
 ```
+
+
+### You can now use redis-cli or library clients:
+
+```sh
+redis-cli -p 6379
+> SET foo bar
+OK
+> GET foo
+"bar"
+> COMMANDS
+1) "PING"
+2) "ECHO message"
+3) "SET key value"
+...etc

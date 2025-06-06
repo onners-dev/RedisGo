@@ -2,11 +2,11 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"net"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Server struct {
@@ -21,297 +21,308 @@ func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 	reader := bufio.NewReader(conn)
 	for {
-		line, err := reader.ReadString('\n')
+		conn.SetReadDeadline(time.Now().Add(10 * time.Minute))
+		peek, err := reader.Peek(1)
 		if err != nil {
-			log.Println("Connection closed:", err)
 			return
 		}
-		cmdLine := strings.TrimSpace(line)
-		parts := strings.Fields(cmdLine)
-		if len(parts) == 0 {
-			fmt.Fprintf(conn, "-ERR empty command\r\n")
-			continue
+		var parts []string
+		if peek[0] == '*' {
+			// RESP
+			parts, err = parseRESP(reader)
+			if err != nil {
+				conn.Write([]byte(respError("Protocol error: " + err.Error())))
+				continue
+			}
+		} else {
+			// Plain line (telnet, nc)
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				return
+			}
+			parts = strings.Fields(strings.TrimSpace(line))
+			if len(parts) == 0 {
+				continue
+			}
 		}
-		switch strings.ToUpper(parts[0]) {
+
+		cmd := strings.ToUpper(parts[0])
+		args := parts[1:]
+
+		switch cmd {
+		// ---------- Meta ----------
 		case "PING":
-			fmt.Fprintf(conn, "PONG\r\n")
-		case "SET":
-			if len(parts) < 3 {
-				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'SET'\r\n")
-				continue
-			}
-			key := parts[1]
-			value := strings.Join(parts[2:], " ")
-			s.store.Set(key, value)
-			fmt.Fprintf(conn, "+OK\r\n")
-		case "GET":
-			if len(parts) != 2 {
-				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'GET'\r\n")
-				continue
-			}
-			key := parts[1]
-			val, ok := s.store.Get(key)
-			if !ok {
-				fmt.Fprintf(conn, "$-1\r\n")
+			if len(args) == 0 {
+				conn.Write([]byte(respSimple("PONG")))
 			} else {
-				fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(val), val)
+				conn.Write([]byte(respBulk(args[0])))
+			}
+		case "ECHO":
+			if len(args) != 1 {
+				conn.Write([]byte(respError("Wrong number of arguments for 'ECHO'")))
+			} else {
+				conn.Write([]byte(respBulk(args[0])))
+			}
+		// ---------- String Commands ----------
+		case "SET":
+			if len(args) != 2 {
+				conn.Write([]byte(respError("Wrong number of arguments for 'SET'")))
+				continue
+			}
+			s.store.Set(args[0], args[1])
+			conn.Write([]byte(respSimple("OK")))
+		case "GET":
+			if len(args) != 1 {
+				conn.Write([]byte(respError("Wrong number of arguments for 'GET'")))
+				continue
+			}
+			val, ok := s.store.Get(args[0])
+			if !ok {
+				conn.Write([]byte(respNullBulk()))
+			} else {
+				conn.Write([]byte(respBulk(val)))
 			}
 		case "DEL":
-			if len(parts) < 2 {
-				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'DEL'\r\n")
+			if len(args) < 1 {
+				conn.Write([]byte(respError("Wrong number of arguments for 'DEL'")))
 				continue
 			}
-			count := 0
-			for _, key := range parts[1:] {
-				if s.store.Del(key) {
-					count++
+			deleted := 0
+			for _, k := range args {
+				if s.store.Del(k) {
+					deleted++
 				}
 			}
-			fmt.Fprintf(conn, ":%d\r\n", count)
-		case "EXPIRE":
-			if len(parts) != 3 {
-				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'EXPIRE'\r\n")
-				continue
-			}
-			key := parts[1]
-			secs, err := strconv.Atoi(parts[2])
-			if err != nil || secs < 0 {
-				fmt.Fprintf(conn, "-ERR invalid expire time\r\n")
-				continue
-			}
-			if s.store.Expire(key, secs) {
-				fmt.Fprintf(conn, ":1\r\n")
-			} else {
-				fmt.Fprintf(conn, ":0\r\n")
-			}
-		case "KEYS":
-			keys := s.store.Keys()
-			fmt.Fprintf(conn, "*%d\r\n", len(keys))
-			for _, key := range keys {
-				fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(key), key)
-			}
-		case "DUMPALL":
-			all := s.store.DumpAll()
-			fmt.Fprintf(conn, "*%d\r\n", len(all))
-			for k, v := range all {
-				fmt.Fprintf(conn, "$%d\r\n%s\r\n$%d\r\n%s\r\n", len(k), k, len(v), v)
-			}
-		case "TTL":
-			if len(parts) != 2 {
-				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'TTL'\r\n")
-				continue
-			}
-			key := parts[1]
-			ttl := s.store.TTL(key)
-			fmt.Fprintf(conn, ":%d\r\n", ttl)
+			conn.Write([]byte(respInt(deleted)))
 		case "INCR":
-			if len(parts) != 2 {
-				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'INCR'\r\n")
+			if len(args) != 1 {
+				conn.Write([]byte(respError("Wrong number of arguments for 'INCR'")))
 				continue
 			}
-			key := parts[1]
-			val, err := s.store.Incr(key)
+			val, err := s.store.Incr(args[0])
 			if err != nil {
-				fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
-			} else {
-				fmt.Fprintf(conn, ":%d\r\n", val)
+				conn.Write([]byte(respError(err.Error())))
+				continue
 			}
+			conn.Write([]byte(respInt(val)))
 		case "DECR":
-			if len(parts) != 2 {
-				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'DECR'\r\n")
-				continue
-			} else {
-				key := parts[1]
-				val, err := s.store.Decr(key)
-				if err != nil {
-					fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
-				} else {
-					fmt.Fprintf(conn, ":%d\r\n", val)
-				}
-			}
-		case "MSET":
-			if len(parts) < 3 || len(parts[1:])%2 != 0 {
-				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'MSET'\r\n")
+			if len(args) != 1 {
+				conn.Write([]byte(respError("Wrong number of arguments for 'DECR'")))
 				continue
 			}
-			err := s.store.MSet(parts[1:]...)
+			val, err := s.store.Decr(args[0])
 			if err != nil {
-				fmt.Fprintf(conn, "-ERR %s\r\n", err.Error())
+				conn.Write([]byte(respError(err.Error())))
+				continue
+			}
+			conn.Write([]byte(respInt(val)))
+		case "MSET":
+			if len(args) < 2 || len(args)%2 != 0 {
+				conn.Write([]byte(respError("MSET requires an even number of arguments (key value ...)")))
+				continue
+			}
+			err := s.store.MSet(args...)
+			if err != nil {
+				conn.Write([]byte(respError(err.Error())))
 			} else {
-				fmt.Fprintf(conn, "+OK\r\n")
+				conn.Write([]byte(respSimple("OK")))
 			}
 		case "MGET":
-			if len(parts) < 2 {
-				fmt.Fprintf(conn, "-ERR wrong number of arguments for 'MGET'\r\n")
+			if len(args) < 1 {
+				conn.Write([]byte(respError("Wrong number of arguments for 'MGET'")))
 				continue
 			}
-			values := s.store.MGet(parts[1:]...)
-			fmt.Fprintf(conn, "*%d\r\n", len(values))
-			for _, v := range values {
+			vals := s.store.MGet(args...)
+			// Convert to RESP array, treating empty string as nil
+			items := make([]string, len(vals))
+			for i, v := range vals {
 				if v == "" {
-					fmt.Fprintf(conn, "$-1\r\n")
+					items[i] = respNullBulk()
 				} else {
-					fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(v), v)
+					items[i] = respBulk(v)
 				}
 			}
+			// Merge as a prebuilt RESP array:
+			resp := "*" + strconv.Itoa(len(items)) + "\r\n" + strings.Join(items, "")
+			conn.Write([]byte(resp))
+		// ---------- List Commands ----------
 		case "LPUSH":
-			if len(parts) < 3 {
-				fmt.Fprintf(conn, "-ERR usage: LPUSH key value [value ...]\r\n")
+			if len(args) < 2 {
+				conn.Write([]byte(respError("LPUSH requires a key and at least one value")))
 				continue
 			}
-			key := parts[1]
-			values := parts[2:]
-			n := s.store.LPush(key, values...)
-			fmt.Fprintf(conn, ":%d\r\n", n)
-
+			newLen := s.store.LPush(args[0], args[1:]...)
+			conn.Write([]byte(respInt(newLen)))
 		case "RPOP":
-			if len(parts) != 2 {
-				fmt.Fprintf(conn, "-ERR usage: RPOP key\r\n")
+			if len(args) != 1 {
+				conn.Write([]byte(respError("RPOP requires a key")))
 				continue
 			}
-			key := parts[1]
-			val, err := s.store.RPop(key)
+			val, err := s.store.RPop(args[0])
 			if err != nil {
-				fmt.Fprintf(conn, "$-1\r\n")
+				conn.Write([]byte(respNullBulk()))
 			} else {
-				fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(val), val)
+				conn.Write([]byte(respBulk(val)))
 			}
-
 		case "LLEN":
-			if len(parts) != 2 {
-				fmt.Fprintf(conn, "-ERR usage: LLEN key\r\n")
+			if len(args) != 1 {
+				conn.Write([]byte(respError("LLEN requires a key")))
 				continue
 			}
-			key := parts[1]
-			n := s.store.LLen(key)
-			fmt.Fprintf(conn, ":%d\r\n", n)
-
+			length := s.store.LLen(args[0])
+			conn.Write([]byte(respInt(length)))
+		// ---------- Set Commands ----------
 		case "SADD":
-			if len(parts) < 3 {
-				fmt.Fprintf(conn, "-ERR usage: SADD key member [member ...]\r\n")
+			if len(args) < 2 {
+				conn.Write([]byte(respError("SADD requires a key and at least one value")))
 				continue
 			}
-			key := parts[1]
-			members := parts[2:]
-			n := s.store.SAdd(key, members...)
-			fmt.Fprintf(conn, ":%d\r\n", n)
-
+			n := s.store.SAdd(args[0], args[1:]...)
+			conn.Write([]byte(respInt(n)))
 		case "SREM":
-			if len(parts) < 3 {
-				fmt.Fprintf(conn, "-ERR usage: SREM key member [member ...]\r\n")
+			if len(args) < 2 {
+				conn.Write([]byte(respError("SREM requires a key and at least one value")))
 				continue
 			}
-			key := parts[1]
-			members := parts[2:]
-			n := s.store.SRem(key, members...)
-			fmt.Fprintf(conn, ":%d\r\n", n)
-
+			n := s.store.SRem(args[0], args[1:]...)
+			conn.Write([]byte(respInt(n)))
 		case "SMEMBERS":
-			if len(parts) != 2 {
-				fmt.Fprintf(conn, "-ERR usage: SMEMBERS key\r\n")
+			if len(args) != 1 {
+				conn.Write([]byte(respError("SMEMBERS requires a key")))
 				continue
 			}
-			key := parts[1]
-			members, err := s.store.SMembers(key)
-			if err != nil {
-				fmt.Fprintf(conn, "*0\r\n")
+			members, err := s.store.SMembers(args[0])
+			if err != nil || len(members) == 0 {
+				conn.Write([]byte("*0\r\n"))
 			} else {
-				fmt.Fprintf(conn, "*%d\r\n", len(members))
-				for _, m := range members {
-					fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(m), m)
-				}
+				conn.Write([]byte(respArray(members)))
 			}
+		// ---------- Hash Commands ----------
 		case "HSET":
-			if len(parts) != 4 {
-				fmt.Fprintf(conn, "-ERR usage: HSET key field value\r\n")
+			if len(args) != 3 {
+				conn.Write([]byte(respError("HSET requires a key, field, value")))
 				continue
 			}
-			key, field, value := parts[1], parts[2], parts[3]
-			n := s.store.HSet(key, field, value)
-			fmt.Fprintf(conn, ":%d\r\n", n)
+			added := s.store.HSet(args[0], args[1], args[2])
+			conn.Write([]byte(respInt(added)))
 		case "HGET":
-			if len(parts) != 3 {
-				fmt.Fprintf(conn, "-ERR usage: HGET key field\r\n")
+			if len(args) != 2 {
+				conn.Write([]byte(respError("HGET requires a key and field")))
 				continue
 			}
-			key, field := parts[1], parts[2]
-			val, ok := s.store.HGet(key, field)
+			val, ok := s.store.HGet(args[0], args[1])
 			if !ok {
-				fmt.Fprintf(conn, "$-1\r\n")
+				conn.Write([]byte(respNullBulk()))
 			} else {
-				fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(val), val)
+				conn.Write([]byte(respBulk(val)))
 			}
 		case "HDEL":
-			if len(parts) < 3 {
-				fmt.Fprintf(conn, "-ERR usage: HDEL key field [field ...]\r\n")
+			if len(args) < 2 {
+				conn.Write([]byte(respError("HDEL requires a key and at least one field")))
 				continue
 			}
-			key := parts[1]
-			n := s.store.HDel(key, parts[2:]...)
-			fmt.Fprintf(conn, ":%d\r\n", n)
+			num := s.store.HDel(args[0], args[1:]...)
+			conn.Write([]byte(respInt(num)))
 		case "HGETALL":
-			if len(parts) != 2 {
-				fmt.Fprintf(conn, "-ERR usage: HGETALL key\r\n")
+			if len(args) != 1 {
+				conn.Write([]byte(respError("HGETALL requires a key")))
 				continue
 			}
-			key := parts[1]
-			vals, err := s.store.HGetAll(key)
-			if err != nil {
-				fmt.Fprintf(conn, "*0\r\n")
-				continue
+			m, err := s.store.HGetAll(args[0])
+			if err != nil || len(m) == 0 {
+				conn.Write([]byte("*0\r\n"))
+			} else {
+				arr := []string{}
+				for k, v := range m {
+					arr = append(arr, k, v)
+				}
+				conn.Write([]byte(respArray(arr)))
 			}
-			fmt.Fprintf(conn, "*%d\r\n", len(vals)*2)
-			for f, v := range vals {
-				fmt.Fprintf(conn, "$%d\r\n%s\r\n$%d\r\n%s\r\n", len(f), f, len(v), v)
-			}
-
+		// ---------- ZSet Commands ----------
 		case "ZADD":
-			if len(parts) != 4 {
-				fmt.Fprintf(conn, "-ERR usage: ZADD key score member\r\n")
+			if len(args) != 3 {
+				conn.Write([]byte(respError("ZADD requires a key, score, member")))
 				continue
 			}
-			key, scoreStr, member := parts[1], parts[2], parts[3]
-			score, err := strconv.ParseFloat(scoreStr, 64)
+			score, err := strconv.ParseFloat(args[1], 64)
 			if err != nil {
-				fmt.Fprintf(conn, "-ERR invalid score\r\n")
+				conn.Write([]byte(respError("Invalid score for ZADD")))
 				continue
 			}
-			n := s.store.ZAdd(key, score, member)
-			fmt.Fprintf(conn, ":%d\r\n", n)
-
+			n := s.store.ZAdd(args[0], score, args[2])
+			conn.Write([]byte(respInt(n)))
 		case "ZREM":
-			if len(parts) != 3 {
-				fmt.Fprintf(conn, "-ERR usage: ZREM key member\r\n")
+			if len(args) != 2 {
+				conn.Write([]byte(respError("ZREM requires a key and member")))
 				continue
 			}
-			key, member := parts[1], parts[2]
-			n := s.store.ZRem(key, member)
-			fmt.Fprintf(conn, ":%d\r\n", n)
-
+			n := s.store.ZRem(args[0], args[1])
+			conn.Write([]byte(respInt(n)))
 		case "ZRANGE":
-			if len(parts) != 4 {
-				fmt.Fprintf(conn, "-ERR usage: ZRANGE key start stop\r\n")
+			if len(args) != 3 {
+				conn.Write([]byte(respError("ZRANGE requires key start stop")))
 				continue
 			}
-			key, startStr, stopStr := parts[1], parts[2], parts[3]
-			start, err1 := strconv.Atoi(startStr)
-			stop, err2 := strconv.Atoi(stopStr)
+			start, err1 := strconv.Atoi(args[1])
+			stop, err2 := strconv.Atoi(args[2])
 			if err1 != nil || err2 != nil {
-				fmt.Fprintf(conn, "-ERR invalid start or stop\r\n")
+				conn.Write([]byte(respError("invalid integer range for ZRANGE")))
 				continue
 			}
-			members, err := s.store.ZRange(key, start, stop)
+			members, err := s.store.ZRange(args[0], start, stop)
+			if err != nil || len(members) == 0 {
+				conn.Write([]byte("*0\r\n"))
+			} else {
+				conn.Write([]byte(respArray(members)))
+			}
+		// ---------- Key Management ----------
+		case "EXPIRE":
+			if len(args) != 2 {
+				conn.Write([]byte(respError("Wrong number of arguments for 'EXPIRE'")))
+				continue
+			}
+			secs, err := strconv.Atoi(args[1])
 			if err != nil {
-				fmt.Fprintf(conn, "*0\r\n")
+				conn.Write([]byte(respError("Invalid seconds for 'EXPIRE'")))
 				continue
 			}
-			fmt.Fprintf(conn, "*%d\r\n", len(members))
-			for _, m := range members {
-				fmt.Fprintf(conn, "$%d\r\n%s\r\n", len(m), m)
+			ok := s.store.Expire(args[0], secs)
+			if ok {
+				conn.Write([]byte(respInt(1)))
+			} else {
+				conn.Write([]byte(respInt(0)))
 			}
-
+		case "TTL":
+			if len(args) != 1 {
+				conn.Write([]byte(respError("Wrong number of arguments for 'TTL'")))
+				continue
+			}
+			ttl := s.store.TTL(args[0])
+			conn.Write([]byte(respInt(ttl)))
+		case "KEYS":
+			keys := s.store.Keys()
+			conn.Write([]byte(respArray(keys)))
+		case "DUMPALL":
+			kv := s.store.DumpAll()
+			arr := []string{}
+			for k, v := range kv {
+				arr = append(arr, k, v)
+			}
+			conn.Write([]byte(respArray(arr)))
+		// ---------- HELP / COMMANDS ----------
+		case "COMMANDS", "HELP":
+			commands := []string{
+				"PING", "ECHO message", "SET key value", "GET key", "DEL key [key ...]", "EXPIRE key seconds", "TTL key",
+				"INCR key", "DECR key", "MSET key value [key value ...]", "MGET key [key ...]",
+				"LPUSH key value [value ...]", "RPOP key", "LLEN key",
+				"SADD key member [member ...]", "SREM key member [member ...]", "SMEMBERS key",
+				"HSET key field value", "HGET key field", "HDEL key field [field ...]", "HGETALL key",
+				"ZADD key score member", "ZREM key member", "ZRANGE key start stop",
+				"DUMPALL", "KEYS",
+			}
+			conn.Write([]byte(respArray(commands)))
 		default:
-			fmt.Fprintf(conn, "-ERR unknown command '%s'\r\n", parts[0])
+			conn.Write([]byte(respError("unknown command `" + cmd + "`")))
 		}
 	}
 }

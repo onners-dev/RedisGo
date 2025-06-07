@@ -2,23 +2,88 @@
 
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans, 'Inter', 'Arial', sans-serif);
+  --font-mono: var(--font-geist-mono, 'Menlo', 'Monaco', 'monospace');
+  --background: #fcfcfc;
+  --foreground: #1a1a1a;
+  --muted: #f3f4f6;
+  --primary: #2e6cff;
+  --border: #e5e7eb;
+  --radius: 12px;
+  background: var(--background);
+  color: var(--foreground);
 }
 
+/* Dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #18181b;
     --foreground: #fafaf9;
+    --muted: #232323;
+    --primary: #7b90ff;
+    --border: #28282d;
   }
 }
 
+/* App base styles */
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   min-height: 100vh;
-  transition: background 0.2s, color 0.2s;
+  transition: background .15s, color .15s;
+  -webkit-font-smoothing: antialiased;
+  font-size: 16px;
+}
+
+a {
+  color: var(--primary);
+  text-underline-position: under;
+  transition: color .2s;
+}
+
+a:hover {
+  color: #162e7a;
+}
+
+input, button, select, textarea {
+  font-family: inherit;
+  font-size: 1em;
+  border-radius: var(--radius);
+  outline: none;
+}
+
+input[type="text"], input[type="number"] {
+  background: var(--muted);
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  color: var(--foreground);
+  transition: border .2s, background .15s;
+}
+input:focus {
+  border-color: var(--primary);
+  background: #fff7;
+}
+
+button {
+  border: none;
+  outline: none;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  background: var(--muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: var(--radius);
+}
+
+@media (max-width: 600px) {
+  body {
+    font-size: 15px;
+  }
 }

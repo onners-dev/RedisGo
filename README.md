@@ -1,16 +1,18 @@
 # RedisGo
 
-A minimal, educational Redis clone in Go — featuring in-memory, TCP-accessible storage with basic Redis-like commands and expiry. Perfect for learning, contributing, or hacking on new database features!
+A minimal, educational Redis clone in Go — featuring in-memory, TCP-accessible storage with basic Redis-like commands and expiry.
 
 ---
 
 ## Features
 
 - Persistent, thread-safe in-memory string storage
-- Redis-style commands: `SET`, `GET`, `DEL`, `EXPIRE`, `TTL`, `INCR`, `DECR`, `KEYS`, `DUMPALL`
+- Redis-style commands: `SET`, `GET`, `DEL`, `EXPIRE`, `TTL`, `INCR`, `DECR`, `KEYS`, `DUMPALL`, and more
 - Time-to-live (TTL) and key expiry
 - Atomic integer operations via `INCR`/`DECR`
+- Lists, Sets, and Hash types
 - Simple, readable codebase and extensive unit tests
+- Webapp (Next.js/React) and API (Python FastAPI) using to showcase features
 
 ---
 
@@ -25,11 +27,26 @@ A minimal, educational Redis clone in Go — featuring in-memory, TCP-accessible
 2. **Install Go if you don't have it**
     https://go.dev/doc/install 
 
-3. **Build and run**
-    ```sh
-    go run .
-    ```
+3.  **Install dependencies for webapp and backend**
+    - Frontend (Next.js):
+      ```sh
+      cd frontend
+      npm install
+      ```
+    - Backend (Python API):
+      ```sh
+      cd ../backend
+      pip install fastapi uvicorn pydantic
+      ```
 
+---
+
+## Direct connection with telnet, nc or redis-cli
+
+```sh
+cd RedisGo
+go run .
+# Server starts on localhost:6379
 
 ## Usage
 
@@ -41,6 +58,30 @@ or use nc
 ```sh
 nc localhost 6379
 ```
+
+
+```sh
+redis-cli -p 6379
+```
+
+
+### Webapp
+
+1. **Start the Python FastAPI backend**
+
+```sh
+cd backend
+uvicorn main:app --reload
+# Runs on http://localhost:8000
+```
+
+2. **start the Next.js fronend**
+```sh
+cd frontend
+npm run dev
+# Runs on http://localhost:3000
+```
+
 
 ### Commands
 
@@ -70,28 +111,15 @@ nc localhost 6379
 | `HGETALL key`                | Get all fields/values in hash  | `HGETALL h`               | `*2 ...`  |
 
 
-### Coming Soon/To-Do
-- Persistence:
-- Append-Only File (AOF) logging
-- Snapshotting (RDB-like periodic dump)
-- Webapp to showcase features
-
 ### Running Tests
 ```sh
 go test
 ```
 
+### Coming Soon/To-Do
+- Append-Only File (AOF) logging
+- Snapshotting (RDB-like periodic dump)
+- Improved webapp features (lists, sets, hashes, charts)
+- Official Docker files for all services
+- More examples & docs
 
-### You can now use redis-cli or library clients:
-
-```sh
-redis-cli -p 6379
-> SET foo bar
-OK
-> GET foo
-"bar"
-> COMMANDS
-1) "PING"
-2) "ECHO message"
-3) "SET key value"
-...etc

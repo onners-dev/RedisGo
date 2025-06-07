@@ -47,7 +47,7 @@ A minimal, educational Redis clone in Go — featuring in-memory, TCP-accessible
 cd RedisGo
 go run .
 # Server starts on localhost:6379
-
+```
 ## Usage
 
 ```sh

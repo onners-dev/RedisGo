@@ -1,170 +1,123 @@
 "use client";
 
-import { useState } from "react";
-import axios from "axios";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+const features = [
+  {
+    key: "strings",
+    label: "String Keys",
+    short: "Store, increment, and expire string values.",
+    explainer: "Support for SET, GET, DEL, INCR, DECR, EXPIRE, TTL, MSET/MGET and more. Fast in-memory key-value access.",
+    commands: ["SET", "GET", "DEL", "MSET", "MGET", "INCR", "DECR", "EXPIRE", "TTL"],
+  },
+  {
+    key: "lists",
+    label: "Lists",
+    short: "Push, pop, and measure lists efficiently.",
+    explainer: "Backed by LPUSH, RPOP, and LLEN. RedisGo allows storing ordered collections, perfect for queues and stacks.",
+    commands: ["LPUSH", "RPOP", "LLEN"],
+  },
+  {
+    key: "sets",
+    label: "Sets",
+    short: "Add and remove unique members.",
+    explainer: "SADD, SREM, and SMEMBERS let you build dynamic, duplicate-free groups.",
+    commands: ["SADD", "SREM", "SMEMBERS"],
+  },
+  {
+    key: "hashes",
+    label: "Hashes",
+    short: "Dictionary-style fields for each key.",
+    explainer: "Model structured objects with HSET, HGET, HDEL, HGETALL. Popular for user profiles and more.",
+    commands: ["HSET", "HGET", "HDEL", "HGETALL"],
+  },
+  {
+    key: "sortedsets",
+    label: "Sorted Sets",
+    short: "Maintain a ranking with scores.",
+    explainer: "Powerful for leaderboards and rankings, using ZADD, ZREM, ZRANGE.",
+    commands: ["ZADD", "ZREM", "ZRANGE"],
+  },
+  {
+    key: "introspection",
+    label: "Introspection",
+    short: "Inspect keys or dump all data.",
+    explainer: "KEYS shows all non-expired keys, DUMPALL gets all string keys and values.",
+    commands: ["KEYS", "DUMPALL"],
+  },
+  {
+    key: "meta",
+    label: "Meta & Health",
+    short: "Ping server, echo, get help.",
+    explainer: "PING, ECHO, COMMANDS/HELP for developer-friendliness and monitoring.",
+    commands: ["PING", "ECHO", "COMMANDS", "HELP"],
+  }
+];
 
 export default function Home() {
-  // States for set/get
-  const [setKey, setSetKey] = useState("");
-  const [setValue, setSetValue] = useState("");
-  const [getKey, setGetKey] = useState("");
-  const [getValue, setGetValue] = useState<string | null>(null);
-
-  // States for counter
-  const [counter, setCounter] = useState<number | null>(null);
-
-  // States for keys
-  const [keys, setKeys] = useState<string[]>([]);
-  const [loadingKeys, setLoadingKeys] = useState(false);
-
-  // Replace with your Python backend URL
-  const API = "http://localhost:8000";
-
-  // Handlers
-  const handleSet = async () => {
-    if (!setKey) return;
-    await axios.post(`${API}/set`, { key: setKey, value: setValue });
-    setSetKey("");
-    setSetValue("");
-  };
-  const handleGet = async () => {
-    if (!getKey) return;
-    const res = await axios.get<{ value: string | null }>(`${API}/get/${getKey}`);
-    setGetValue(res.data.value);
-  };
-
-  // Counter handlers (assumes you implement this API in Python)
-  const handleUpdateCounter = async (action: "incr" | "decr") => {
-    const key = "counter";
-    const res = await axios.post<{ value: number }>(
-      `${API}/counter`,
-      { key, action }
-    );
-    setCounter(res.data.value);
-  };
-
-  // Load keys (assumes you implement this API in Python)
-  const fetchKeys = async () => {
-    setLoadingKeys(true);
-    const res = await axios.get<{ keys: string[] }>(`${API}/keys`);
-    setKeys(res.data.keys);
-    setLoadingKeys(false);
-  };
+  const [hovered, setHovered] = useState<string | null>(null);
+  const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-background text-foreground px-4 py-14 flex flex-col justify-start items-center font-sans">
-      <header className="mb-10 flex items-center gap-4">
-        <Image
-          src="/redis.png"
-          alt="RedisGo Logo"
-          width={48}
-          height={48}
-          className="rounded shadow"
-        />
-        <h1 className="text-3xl font-bold tracking-tight">RedisGo Showcase</h1>
+    <main className="min-h-screen flex flex-col items-center justify-start px-4 py-16 bg-background text-foreground font-sans">
+      <header className="flex flex-col items-center mb-12">
+        <Image src="/redis.png" width={64} height={64} alt="RedisGo logo" className="mb-3 rounded shadow-xl" />
+        <h1 className="text-4xl font-bold tracking-tighter mb-2">RedisGo</h1>
+        <p className="text-lg max-w-xl text-center text-gray-700 dark:text-gray-300 mb-2">
+          A minimal, educational Redis clone in Go — fast, in-memory, thread-safe, and ready for you to explore.
+        </p>
+        <Link
+          href="/demo"
+          className="mt-3 px-6 py-2 rounded-lg bg-blue-600 text-white text-base font-semibold hover:bg-blue-700 shadow transition"
+        >
+          Try the Demo &rarr;
+        </Link>
       </header>
-
-      <div className="grid gap-7 w-full max-w-2xl">
-        {/* Set/Get Section */}
-        <section className="bg-white/70 dark:bg-zinc-900/80 rounded-xl shadow p-6 flex flex-col gap-4">
-          <h2 className="text-xl font-semibold mb-1">📝 Set / Get String</h2>
-          <div className="flex gap-2 items-end">
-            <div>
-              <label className="text-xs">Set key</label>
-              <input
-                type="text"
-                value={setKey}
-                onChange={e => setSetKey(e.target.value)}
-                className="rounded p-2 border w-28 mr-2 text-black"
-                placeholder="key"
-              />
-              <input
-                type="text"
-                value={setValue}
-                onChange={e => setSetValue(e.target.value)}
-                className="rounded p-2 border w-28 mr-2 text-black"
-                placeholder="value"
-              />
-              <button
-                className="rounded bg-blue-500 text-white px-3 py-2 hover:bg-blue-600 transition"
-                onClick={handleSet}
-              >
-                SET
-              </button>
-            </div>
-            <div>
-              <label className="text-xs">Get key</label>
-              <input
-                type="text"
-                value={getKey}
-                onChange={e => setGetKey(e.target.value)}
-                className="rounded p-2 border w-28 mr-2 text-black"
-                placeholder="key"
-              />
-              <button
-                className="rounded bg-green-600 text-white px-3 py-2 hover:bg-green-700 transition"
-                onClick={handleGet}
-              >
-                GET
-              </button>
-              <span className="ml-2 text-sm font-mono">
-                {getValue !== null && <span>Value: <b>{getValue}</b></span>}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* Counter */}
-        <section className="bg-white/70 dark:bg-zinc-900/80 rounded-xl shadow p-6 flex flex-col gap-3">
-          <h2 className="text-xl font-semibold mb-2">🔢 INCR / DECR (Counter Demo)</h2>
-          <div className="flex gap-4 items-center">
-            <button
-              className="rounded bg-gray-200 dark:bg-zinc-800 px-4 py-2 text-2xl font-bold"
-              onClick={() => handleUpdateCounter("decr")}
-            >-</button>
-            <span className="text-2xl">{counter !== null ? counter : "--"}</span>
-            <button
-              className="rounded bg-gray-200 dark:bg-zinc-800 px-4 py-2 text-2xl font-bold"
-              onClick={() => handleUpdateCounter("incr")}
-            >+</button>
-            <button
-              className="ml-4 text-sm underline"
-              onClick={async () => {
-                const res = await axios.get<{ value: string | null }>(`${API}/get/counter`);
-                setCounter(res.data.value ? parseInt(res.data.value) : 0);
+      <section className="w-full max-w-4xl" id="features">
+        <h2 className="text-2xl font-bold mb-7">✨ Features</h2>
+        <ul className="grid md:grid-cols-2 gap-5">
+          {features.map((f) => (
+            <li
+              key={f.key}
+              className={`relative group bg-[var(--muted)] dark:bg-[var(--muted)] overflow-visible rounded-2xl p-6 border border-transparent hover:border-blue-400 shadow-lg transition cursor-pointer`}
+              onMouseEnter={() => setHovered(f.key)}
+              onMouseLeave={() => setHovered(null)}
+              onClick={() => {
+                if (f.key === "strings") {
+                  router.push("/demo?feature=strings");
+                } else {
+                  router.push("/demo");
+                }
               }}
+              tabIndex={0}
+              aria-describedby={`feature-detail-${f.key}`}
             >
-              Load value
-            </button>
-          </div>
-        </section>
-
-        {/* Keys */}
-        <section className="bg-white/70 dark:bg-zinc-900/80 rounded-xl shadow p-6">
-          <h2 className="text-xl font-semibold mb-2">🔑 All Keys</h2>
-          <button
-            className="rounded bg-violet-500 text-white px-3 py-2 hover:bg-violet-600 transition mb-3"
-            onClick={fetchKeys}
-            disabled={loadingKeys}
-          >
-            {loadingKeys ? "Loading..." : "Show Keys"}
-          </button>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {keys.length === 0 && !loadingKeys ? (
-              <span className="text-zinc-500 text-sm">No keys.</span>
-            ) : (
-              keys.map((k, i) => (
-                <span key={i} className="rounded bg-zinc-200 dark:bg-zinc-800 px-2 py-1 font-mono text-xs">{k}</span>
-              ))
-            )}
-          </div>
-        </section>
-      </div>
-
-      <footer className="mt-16 text-sm text-zinc-500 text-center">
-        Powered by <a href="https://github.com/yourusername/RedisGo" className="underline hover:text-blue-700">RedisGo</a>
-      </footer>
-    </div>
+              <div className="text-xl font-semibold mb-2 flex items-center gap-2">
+                {f.label}
+                <span className="inline text-xs text-gray-500 dark:text-gray-300 font-mono">
+                  ({f.commands.join(", ")})
+                </span>
+              </div>
+              <div className="text-base text-zinc-600 dark:text-zinc-300">{f.short}</div>
+              {/* Expanding explainer on hover/focus */}
+              <div
+                id={`feature-detail-${f.key}`}
+                className={`absolute left-0 right-0 top-full mt-3 z-10 pointer-events-none transition-all duration-300
+                  bg-white dark:bg-zinc-900 rounded-xl shadow-xl p-3 text-base text-zinc-900 dark:text-zinc-100
+                  ${hovered === f.key ? "opacity-100 translate-y-0 scale-100 visible" : "opacity-0 scale-95 invisible"}
+                `}
+                style={{ minWidth: "250px" }}
+                aria-hidden={hovered !== f.key}
+              >
+                {f.explainer}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </main>
   );
 }

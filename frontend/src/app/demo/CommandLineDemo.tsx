@@ -5,7 +5,7 @@ import axios from "axios";
 const API = "http://localhost:8000";
 
 export default function CommandLineDemo() {
-  const [history, setHistory] = useState<string[]>(["Welcome to RedisGo! Type a command:"]);
+  const [history, setHistory] = useState<string[]>(["Welcome to RedisGo!"]);
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -34,11 +34,11 @@ export default function CommandLineDemo() {
       <form className="pt-2 flex gap-2" onSubmit={handleCommand}>
         <span className="text-green-400 font-bold">{">"}</span>
         <input
-          className="bg-black text-green-200 border-0 focus:outline-none font-mono flex-1"
+          className="terminal-input bg-black focus:bg-black text-green-200 caret-green-300 border-0 focus:outline-none font-mono flex-1"
           autoFocus
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder="Type command and hit Enter..."
+          placeholder="Type help for a list of commands..."
         />
       </form>
       <div ref={endRef} />

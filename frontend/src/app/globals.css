@@ -65,6 +65,15 @@ input:focus {
   background: #fff7;
 }
 
+
+.terminal-input, .terminal-input:focus {
+  background: #000 !important;
+  color: #bbf7d0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+
 button {
   border: none;
   outline: none;

@@ -8,7 +8,7 @@ export default function DemoPage() {
 
   return (
     <main className="min-h-screen px-4 py-12 bg-background text-foreground flex flex-col items-center">
-      <h1 className="text-3xl font-bold mb-6">RedisGo Live Demo</h1>
+      <h1 className="text-3xl font-bold mb-6">RedisGo</h1>
       <div className="mb-6">
         <button
           className={`px-5 py-2 rounded-l-lg ${mode === "cli"

@@ -71,7 +71,7 @@ export default function Home() {
         </p>
         <Link
           href="/demo"
-          className="mt-3 px-6 py-2 rounded-lg bg-blue-600 text-white text-base font-semibold hover:bg-blue-700 shadow transition"
+          className="mt-3 px-6 py-2 rounded-lg bg-blue-500 !text-white text-base font-semibold hover:bg-blue-600 shadow transition"
         >
           Try the Demo &rarr;
         </Link>

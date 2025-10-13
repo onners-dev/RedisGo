@@ -24,10 +24,32 @@ A minimal, educational Redis clone in Go — featuring in-memory, TCP-accessible
    cd RedisGo
     ```
 
-2. **Install Go if you don't have it**
+### Docker
+
+2. **Build and start all services using Docker Compose:**
+    ```sh
+    docker compose up --build
+    ```
+    This will start:
+    - RedisGo server on port **6379**
+    - FastAPI backend on port **8000**
+    - Next.js frontend on port **3000**
+
+3. **Open in your browser:**  
+    - Frontend: [http://localhost:3000](http://localhost:3000)
+    - Backend API: [http://localhost:8000](http://localhost:8000)
+
+### Without docker
+2. **Clone the repo**
+   ```sh
+   git clone https://github.com/yourusername/RedisGo.git
+   cd RedisGo
+    ```
+
+3. **Install Go if you don't have it**
     https://go.dev/doc/install 
 
-3.  **Install dependencies for webapp and backend**
+4.  **Install dependencies for webapp and backend**
     - Frontend (Next.js):
       ```sh
       cd frontend

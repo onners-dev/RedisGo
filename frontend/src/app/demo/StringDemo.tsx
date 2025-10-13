@@ -13,7 +13,7 @@ export default function StringDemo() {
   const [loading, setLoading] = useState(false);
 
   // Helper to run async actions with loading UI and error handling
-  const run = async (fn: () => Promise<any>) => {
+  const run = async (fn: () => Promise<unknown>) => {
     setLoading(true);
     try {
       await fn();
@@ -25,27 +25,27 @@ export default function StringDemo() {
   // Handlers
   const handleSet = async () => {
     await axios.post(`${API}/set`, { key, value });
-    setResponse(`Key "${key}" set to "${value}" 🚀`);
+    setResponse(`Key &quot;${key}&quot; set to &quot;${value}&quot; 🚀`);
   };
 
   const handleGet = async () => {
     const res = await axios.get<{ value: string | null }>(`${API}/get/${key}`);
     setResponse(
       res.data.value !== null
-        ? `Value for "${key}": "${res.data.value}"`
-        : `Key "${key}" not found`
+        ? `Value for &quot;${key}&quot;: &quot;${res.data.value}&quot;`
+        : `Key &quot;${key}&quot; not found`
     );
   };
 
   const handleDel = async () => {
     const res = await axios.post(`${API}/cli`, { cmd: `DEL ${key}` });
     const out = res.data.resp.trim();
-    setResponse(out === ":1" ? `Key "${key}" deleted 🗑️` : `Key "${key}" was not found or already deleted`);
+    setResponse(out === ":1" ? `Key &quot;${key}&quot; deleted 🗑️` : `Key &quot;${key}&quot; was not found or already deleted`);
   };
 
   const handleIncrDecr = async (op: "incr" | "decr") => {
     const res = await axios.post<{ value: number }>(`${API}/counter`, { key, action: op });
-    setResponse(`${op === "incr" ? "INCR" : "DECR"} "${key}": ${res.data.value}`);
+    setResponse(`${op === "incr" ? "INCR" : "DECR"} &quot;${key}&quot;: ${res.data.value}`);
   };
 
   const handleExpire = async () => {
@@ -53,7 +53,7 @@ export default function StringDemo() {
     const res = await axios.post(`${API}/cli`, { cmd: `EXPIRE ${key} ${seconds}` });
     setResponse(
       res.data.resp.trim() === ":1"
-        ? `Expiry set for "${key}" (${seconds} seconds) ⏰`
+        ? `Expiry set for &quot;${key}&quot; (${seconds} seconds) ⏰`
         : `Couldn't set expiry! Does the key exist?`
     );
   };
@@ -63,7 +63,7 @@ export default function StringDemo() {
     const out = res.data.resp.trim();
     setResponse(
       out.startsWith(":")
-        ? `TTL for "${key}": ${out.replace(":", "")} seconds`
+        ? `TTL for &quot;${key}&quot;: ${out.replace(":", "")} seconds`
         : `TTL unknown`
     );
   };
@@ -82,7 +82,7 @@ export default function StringDemo() {
             setResponse(null);
           }}
         >
-          Key: "{DEMO_KEY}", Value: "{DEMO_VALUE}"
+          Key: &quot;{DEMO_KEY}&quot;, Value: &quot;{DEMO_VALUE}&quot;
         </button>
       </div>
 

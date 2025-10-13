@@ -20,8 +20,12 @@ export default function CommandLineDemo() {
     try {
       const res = await axios.post(`${API}/cli`, { cmd: input });
       setHistory(h => [...h, res.data.resp || "<no response>"]);
-    } catch (err: any) {
-      setHistory(h => [...h, err.response?.data?.detail || "Network error"]);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setHistory(h => [...h, err.response?.data?.detail || "Network error"]);
+      } else {
+        setHistory(h => [...h, "Unknown error"]);
+      }
     }
     setInput("");
   }

@@ -58,8 +58,12 @@ A minimal, educational Redis clone in Go — featuring in-memory, TCP-accessible
     - Backend (Python API):
       ```sh
       cd ../backend
-      pip install fastapi uvicorn pydantic
+      pip install -r requirements.txt
       ```
+
+      Also create a .env file in the backend and add these:
+      REDIS_HOST=localhost
+      REDIS_PORT=6379
 
 ---
 

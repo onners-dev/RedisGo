@@ -7,6 +7,9 @@ from routes.keys import router as keys_router
 from routes.hashes import router as hashes_router
 from models import CLIRequest
 from redis_client import send_redis_command
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 
